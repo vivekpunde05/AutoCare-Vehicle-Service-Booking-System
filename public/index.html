@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="vehicleApp">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AutoCare | Vehicle Service Booking</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+</head>
+<body ng-controller="MainController as vm">
+  <header class="topbar">
+    <a class="brand" href="#" ng-click="vm.page='dashboard'"><span class="brand-icon">✦</span> AutoCare</a>
+    <nav ng-if="vm.user">
+      <a href="" ng-if="vm.user.role!=='admin'" ng-click="vm.go('dashboard')" ng-class="{active:vm.page==='dashboard'}">Dashboard</a>
+      <a href="" ng-if="vm.user.role!=='admin'" ng-click="vm.go('vehicles')" ng-class="{active:vm.page==='vehicles'}">My Vehicles</a>
+      <a href="" ng-if="vm.user.role!=='admin'" ng-click="vm.go('bookings')" ng-class="{active:vm.page==='bookings'}">Bookings</a>
+      <a href="" ng-if="vm.user.role==='admin'" ng-click="vm.go('admin')" ng-class="{active:vm.page==='admin'}">Admin Console</a>
+    </nav>
+    <div class="account" ng-if="vm.user">
+      <span class="avatar">{{vm.user.name.charAt(0).toUpperCase()}}</span>
+      <span class="account-name">{{vm.user.name}}</span>
+      <span class="status status-purple" ng-if="vm.user.role==='admin'" style="font-size:10px;padding:3px 7px;">Admin</span>
+      <button class="btn btn-light btn-small" ng-click="vm.logout()">Log out</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="alert" ng-if="vm.message" ng-class="vm.messageType">{{vm.message}}<button ng-click="vm.message=''">×</button></div>
+
+    <section class="auth-layout" ng-if="!vm.user">
+      <div class="auth-hero">
+        <div class="eyebrow">YOUR VEHICLE, OUR PRIORITY</div>
+        <h1>Car care made<br><span>simple.</span></h1>
+        <p>Book trusted vehicle services, manage appointments, and keep every journey running smoothly.</p>
+        <div class="hero-points"><span>✓ Easy online booking</span><span>✓ Service progress updates</span><span>✓ Complete service history</span></div>
+      </div>
+      <div class="auth-card">
+        <div class="tabs">
+          <button ng-class="{selected:vm.authMode==='login'}" ng-click="vm.authMode='login'">Sign in</button>
+          <button ng-class="{selected:vm.authMode==='register'}" ng-click="vm.authMode='register'">Create account</button>
+          <button ng-class="{selected:vm.authMode==='admin'}" ng-click="vm.authMode='admin'">Admin Login</button>
+        </div>
+        <form ng-submit="vm.login()" ng-if="vm.authMode==='login'">
+          <h2>Customer Sign in</h2><p class="muted">Sign in to manage your vehicles and service bookings.</p>
+          <label>Email address</label><input type="email" ng-model="vm.loginForm.email" placeholder="you@example.com" required>
+          <label>Password</label><input type="password" ng-model="vm.loginForm.password" placeholder="Enter your password" required>
+          <button class="btn btn-primary btn-full" type="submit" ng-disabled="vm.busy">{{vm.busy?'Please wait…':'Sign in →'}}</button>
+          <p class="hint">New customer? <a href="" ng-click="vm.authMode='register'" style="color:var(--purple);font-weight:600">Create an account</a> to get started.</p>
+        </form>
+        <form ng-submit="vm.register()" ng-if="vm.authMode==='register'">
+          <h2>Create customer account</h2><p class="muted">Register to book vehicle services online.</p>
+          <label>Full name</label><input ng-model="vm.registerForm.name" placeholder="Your name" required>
+          <label>Email address</label><input type="email" ng-model="vm.registerForm.email" placeholder="you@example.com" required>
+          <label>Phone number</label><input ng-model="vm.registerForm.phone" placeholder="Optional phone number">
+          <label>Password (minimum 6 characters)</label><input type="password" ng-model="vm.registerForm.password" minlength="6" required>
+          <button class="btn btn-primary btn-full" type="submit" ng-disabled="vm.busy">{{vm.busy?'Creating…':'Create account →'}}</button>
+        </form>
+        <form ng-submit="vm.adminLogin()" ng-if="vm.authMode==='admin'">
+          <h2>Workshop Admin Portal</h2><p class="muted">Authorized workshop staff login only.</p>
+          <label>Admin Email</label><input type="email" ng-model="vm.adminForm.email" placeholder="admin@autocare.com" required>
+          <label>Admin Password</label><input type="password" ng-model="vm.adminForm.password" placeholder="••••••••" required>
+          <button class="btn btn-primary btn-full" type="submit" ng-disabled="vm.busy">{{vm.busy?'Authenticating…':'Admin Sign in →'}}</button>
+          <p class="hint">Customers should use the regular <a href="" ng-click="vm.authMode='login'" style="color:var(--purple);font-weight:600">Sign in</a> tab.</p>
+        </form>
+      </div>
+    </section>
+
+    <section ng-if="vm.user && vm.page==='dashboard'">
+      <div class="welcome-row"><div><div class="eyebrow">OVERVIEW</div><h1>Good to see you, {{vm.user.name.split(' ')[0]}} 👋</h1><p class="muted">Here’s what’s happening with your vehicle care.</p></div><button class="btn btn-primary" ng-click="vm.go('bookings')">＋ Book a service</button></div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon purple">▣</div><div class="stat-label">Total bookings</div><div class="stat-number">{{vm.stats.total}}</div><div class="stat-note">All service appointments</div></div>
+        <div class="stat-card"><div class="stat-icon amber">◷</div><div class="stat-label">Pending requests</div><div class="stat-number">{{vm.stats.pending}}</div><div class="stat-note">Waiting for confirmation</div></div>
+        <div class="stat-card"><div class="stat-icon blue">⚙</div><div class="stat-label">In progress</div><div class="stat-number">{{vm.stats.progress}}</div><div class="stat-note">Currently being serviced</div></div>
+        <div class="stat-card"><div class="stat-icon green">✓</div><div class="stat-label">Completed</div><div class="stat-number">{{vm.stats.completed}}</div><div class="stat-note">Services completed</div></div>
+      </div>
+      <div class="section-heading"><div><h2>Available services</h2><p class="muted">Choose the right care for your vehicle.</p></div><button class="text-button" ng-click="vm.go('bookings')">View bookings →</button></div>
+      <div class="service-grid">
+        <article class="service-card" ng-repeat="s in vm.services">
+          <div class="service-icon">{{vm.serviceIcon(s.name)}}</div><h3>{{s.name}}</h3><p>{{s.description}}</p>
+          <div class="service-bottom"><strong>₹{{s.price | number:0}}</strong><span>◷ {{s.duration_minutes}} min</span></div>
+          <button class="btn btn-outline btn-full" ng-click="vm.startBooking(s)">Book service</button>
+        </article>
+      </div>
+      <div class="section-heading"><div><h2>Recent bookings</h2><p class="muted">Your latest service activity.</p></div></div>
+      <div class="table-card" ng-if="vm.bookings.length">
+        <table><thead><tr><th>BOOKING</th><th>VEHICLE</th><th>SERVICE</th><th>DATE</th><th>STATUS</th></tr></thead>
+          <tbody><tr ng-repeat="b in vm.bookings | limitTo:4"><td class="strong">#AC-{{b.id}}</td><td>{{b.make}} {{b.model}}<small>{{b.registration_number}}</small></td><td>{{b.service_name}}</td><td>{{b.booking_date}}<small>{{b.booking_time}}</small></td><td><span class="status" ng-class="vm.statusClass(b.status)">{{b.status}}</span></td></tr></tbody>
+        </table>
+      </div>
+      <div class="empty-state" ng-if="!vm.bookings.length"><div class="empty-icon">▣</div><h3>No bookings yet</h3><p>Book your first service to see it here.</p><button class="btn btn-primary" ng-click="vm.go('bookings')">Book a service</button></div>
+    </section>
+
+    <section ng-if="vm.user && vm.page==='vehicles'">
+      <div class="page-heading"><div><div class="eyebrow">YOUR GARAGE</div><h1>My vehicles</h1><p class="muted">Keep your vehicle details ready for quick booking.</p></div></div>
+      <div class="two-col">
+        <div class="panel"><h2>Add a vehicle</h2><form ng-submit="vm.addVehicle()">
+          <label>Vehicle make</label><input ng-model="vm.vehicleForm.make" placeholder="e.g. Hyundai" required>
+          <label>Model</label><input ng-model="vm.vehicleForm.model" placeholder="e.g. i20" required>
+          <label>Registration number</label><input ng-model="vm.vehicleForm.registration_number" placeholder="MH12AB1234" required>
+          <label>Vehicle type</label><select ng-model="vm.vehicleForm.vehicle_type"><option>Car</option><option>Bike</option><option>Scooter</option><option>Other</option></select>
+          <label>Year</label><input type="number" min="1980" max="2099" ng-model="vm.vehicleForm.year" placeholder="2022">
+          <button class="btn btn-primary btn-full" type="submit">＋ Add vehicle</button>
+        </form></div>
+        <div><div class="vehicle-card" ng-repeat="v in vm.vehicles"><div class="vehicle-art">🚘</div><div class="vehicle-info"><span class="status status-blue">{{v.vehicle_type}}</span><h3>{{v.make}} {{v.model}}</h3><p>{{v.registration_number}}</p><small>Model year: {{v.year || 'Not provided'}}</small></div><button class="icon-button danger" title="Delete vehicle" ng-click="vm.deleteVehicle(v)">×</button></div>
+          <div class="empty-state" ng-if="!vm.vehicles.length"><h3>Your garage is empty</h3><p>Add a vehicle to start booking services.</p></div></div>
+      </div>
+    </section>
+
+    <section ng-if="vm.user && vm.page==='bookings'">
+      <div class="welcome-row"><div><div class="eyebrow">SERVICE APPOINTMENTS</div><h1>Bookings & services</h1><p class="muted">Schedule a new visit or track an existing booking.</p></div><button class="btn btn-primary" ng-click="vm.showBookingForm=!vm.showBookingForm">＋ New booking</button></div>
+      <div class="panel booking-form" ng-if="vm.showBookingForm"><h2>Book a service</h2><form ng-submit="vm.createBooking()">
+        <div class="form-grid"><div><label>Select vehicle</label><select ng-model="vm.bookingForm.vehicle_id" ng-options="v.id as (v.make+' '+v.model+' — '+v.registration_number) for v in vm.vehicles" required><option value="">Choose a vehicle</option></select></div>
+        <div><label>Service type</label><select ng-model="vm.bookingForm.service_id" ng-options="s.id as (s.name+' — ₹'+s.price) for s in vm.services" required><option value="">Choose a service</option></select></div>
+        <div><label>Appointment date</label><input type="date" ng-model="vm.bookingForm.booking_date" min="{{vm.minDate}}" required></div>
+        <div><label>Appointment time</label><select ng-model="vm.bookingForm.booking_time" required><option value="">Choose a time</option><option ng-repeat="t in vm.timeSlots" value="{{t}}">{{t}}</option></select></div></div>
+        <label>Notes (optional)</label><textarea ng-model="vm.bookingForm.notes" rows="3" placeholder="Describe any issue with your vehicle"></textarea>
+        <div class="form-actions"><button type="button" class="btn btn-light" ng-click="vm.showBookingForm=false">Cancel</button><button class="btn btn-primary" type="submit" ng-disabled="vm.busy">Submit booking</button></div>
+        <p class="hint" ng-if="!vm.vehicles.length">Please add a vehicle in My Vehicles before booking.</p>
+      </form></div>
+      <div class="table-card" ng-if="vm.bookings.length"><table><thead><tr><th>BOOKING ID</th><th>VEHICLE / SERVICE</th><th>DATE & TIME</th><th>MECHANIC</th><th>AMOUNT</th><th>STATUS</th></tr></thead>
+        <tbody><tr ng-repeat="b in vm.bookings"><td class="strong">#AC-{{b.id}}<small>Payment: {{b.payment_status}}</small></td><td>{{b.make}} {{b.model}}<small>{{b.registration_number}} · {{b.service_name}}</small></td><td>{{b.booking_date}}<small>{{b.booking_time}}</small></td><td>{{b.mechanic_name || 'Not assigned'}}</td><td>₹{{b.total_amount | number:0}}</td><td><span class="status" ng-class="vm.statusClass(b.status)">{{b.status}}</span></td></tr></tbody></table></div>
+      <div class="empty-state" ng-if="!vm.bookings.length"><div class="empty-icon">◷</div><h3>No appointments found</h3><p>Start by booking a service for your vehicle.</p><button class="btn btn-primary" ng-click="vm.showBookingForm=true">Create booking</button></div>
+    </section>
+
+    <section ng-if="vm.user && vm.page==='admin' && vm.user.role==='admin'">
+      <div class="page-heading"><div><div class="eyebrow">MANAGEMENT CONSOLE</div><h1>Admin dashboard</h1><p class="muted">Manage appointments and keep service operations moving.</p></div></div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">All bookings</div><div class="stat-number">{{vm.stats.total}}</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-number">{{vm.stats.pending}}</div></div>
+        <div class="stat-card"><div class="stat-label">In progress</div><div class="stat-number">{{vm.stats.progress}}</div></div>
+        <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-number">{{vm.stats.completed}}</div></div>
+      </div>
+      <div class="table-card"><table><thead><tr><th>BOOKING</th><th>CUSTOMER VEHICLE</th><th>SERVICE / DATE</th><th>ASSIGNED MECHANIC</th><th>STATUS</th><th>UPDATE</th></tr></thead>
+        <tbody><tr ng-repeat="b in vm.bookings"><td class="strong">#AC-{{b.id}}</td><td>{{b.make}} {{b.model}}<small>{{b.registration_number}}</small></td><td>{{b.service_name}}<small>{{b.booking_date}} {{b.booking_time}}</small></td><td><div ng-if="b.mechanic_name" style="font-weight:700;color:var(--purple);margin-bottom:4px;">👨‍🔧 {{b.mechanic_name}}</div><div ng-if="!b.mechanic_name" class="muted" style="font-size:11px;margin-bottom:4px;">(Not assigned yet)</div><select class="compact-select" ng-model="b.edit_mechanic" ng-options="m.id as (m.name + ' — ' + m.specialization) for m in vm.mechanics"><option value="">-- Assign Mechanic --</option></select></td><td><select class="compact-select" ng-model="b.edit_status" ng-options="s for s in vm.statuses"></select></td><td><button class="btn btn-primary btn-small" ng-click="vm.updateBooking(b)">Save</button></td></tr></tbody></table></div>
+
+      <div class="section-heading" style="margin-top:35px">
+        <div><h2>Workshop Mechanics</h2><p class="muted">Active technicians available for service assignments.</p></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:30px;">
+        <div class="panel" style="padding:16px 18px;margin-bottom:0;" ng-repeat="m in vm.mechanics">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:#eef0ff;color:var(--purple);display:grid;place-items:center;font-size:20px;">👨‍🔧</div>
+            <div>
+              <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">{{m.name}}</h3>
+              <p style="margin:0;color:var(--muted);font-size:12px;">{{m.specialization}}</p>
+              <small style="color:#888;font-size:11px;">📞 {{m.phone}}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer ng-if="vm.user"><span>© 2026 AutoCare Service Management</span><span>Made for smarter vehicle care · Demo project</span></footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
